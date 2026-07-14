@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NE 2ND FL">
+
+    <link rel="apple-touch-icon" href="nelogo.png">
+    
+    <title>NE 2ND FL</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Removed the overscroll-behavior styles so panning feels natural */
+    </style>
+</head>
+<body class="bg-black h-screen w-screen m-0 flex items-center justify-center overflow-auto">
+
+    <img src="ne2nd.png" alt="DDBOARD" class="max-w-full max-h-full object-contain">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registered successfully');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
