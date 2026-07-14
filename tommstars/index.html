@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,14 +15,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* Prevent elastic bouncing on iOS */
-        body {
-            overscroll-behavior-y: none;
-            -webkit-overflow-scrolling: touch;
-        }
+        /* Removed the overscroll-behavior styles so panning feels natural */
     </style>
 </head>
-<body class="bg-black h-screen w-screen m-0 flex items-center justify-center overflow-hidden">
+<body class="bg-black h-screen w-screen m-0 flex items-center justify-center overflow-auto">
 
     <img src="TS_Map-1.png" alt="TSCGMAP" class="max-w-full max-h-full object-contain">
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tscg-map-cache-v1';
+const CACHE_NAME = 'tscg-map-cache-v2';
 
 // List all the files you want cached
 const urlsToCache = [
