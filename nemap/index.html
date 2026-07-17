@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NE MAP">
+
+    <link rel="apple-touch-icon" href="nelogo.png">
+    
+    <title>NE MAP</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black h-screen w-screen m-0 flex flex-col justify-between overflow-auto relative">
+
+    <div class="flex-grow flex items-center justify-center p-4">
+        <img id="mapDisplay" src="ne1st.png" alt="TSCGMAP" class="max-w-full max-h-[85vh] object-contain">
+    </div>
+
+    <div class="w-full pb-8 pt-4 flex justify-center gap-4 bg-gradient-to-t from-black via-black/80 to-transparent absolute bottom-0 left-0 z-10">
+        <button onclick="switchMap('ne1st.png', this)" class="map-btn px-6 py-2 rounded-full bg-blue-600 text-white font-semibold transition-all shadow-lg border border-blue-500">
+            1st Floor
+        </button>
+        <button onclick="switchMap('ne2nd.png', this)" class="map-btn px-6 py-2 rounded-full bg-zinc-800 text-zinc-300 font-semibold transition-all shadow-lg border border-zinc-700">
+            2nd Floor
+        </button>
+    </div>
+
+    <script>
+        // Function to switch the image and update button styling
+        function switchMap(imageName, clickedButton) {
+            // Update the image source
+            document.getElementById('mapDisplay').src = imageName;
+
+            // Reset all buttons to unselected style
+            document.querySelectorAll('.map-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-500');
+                btn.classList.add('bg-zinc-800', 'text-zinc-300', 'border-zinc-700');
+            });
+
+            // Set the clicked button to selected style
+            clickedButton.classList.remove('bg-zinc-800', 'text-zinc-300', 'border-zinc-700');
+            clickedButton.classList.add('bg-blue-600', 'text-white', 'border-blue-500');
+        }
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registered successfully');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
