@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="2025 PROTO">
+
+    <link rel="apple-touch-icon" href="gmvlogo.png">
+    
+    <title>2025 PROTO</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black h-screen w-screen m-0 flex flex-col justify-between overflow-hidden relative">
+
+    <!-- Iframe now points to the PDF.js viewer, which loads your PDF -->
+    <div class="flex-grow w-full h-full pb-20">
+        <iframe id="mapDisplay" src="pdfjs/web/viewer.html?file=../../2025protocol.pdf" class="w-full h-full border-none bg-white"></iframe>
+    </div>
+
+    <!-- Map Switcher Navigation Bar -->
+    <div class="w-full pb-8 pt-4 flex justify-center gap-4 bg-gradient-to-t from-black via-black/80 to-transparent absolute bottom-0 left-0 z-10">
+        <button onclick="switchMap('2025protocol.pdf', this)" class="map-btn px-6 py-2 rounded-full bg-blue-600 text-white font-semibold transition-all shadow-lg border border-blue-500">
+            Main
+        </button>
+    </div>
+
+    <script>
+        function switchMap(pdfName, clickedButton) {
+            // Update the iframe to use the PDF.js viewer with the new file
+            document.getElementById('mapDisplay').src = 'pdfjs/web/viewer.html?file=../../' + pdfName;
+
+            // Reset button styles
+            document.querySelectorAll('.map-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-500');
+                btn.classList.add('bg-zinc-800', 'text-zinc-300', 'border-zinc-700');
+            });
+
+            // Set active button style
+            clickedButton.classList.remove('bg-zinc-800', 'text-zinc-300', 'border-zinc-700');
+            clickedButton.classList.add('bg-blue-600', 'text-white', 'border-blue-500');
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(() => console.log('ServiceWorker registered'))
+                    .catch(err => console.log('ServiceWorker failed: ', err));
+            });
+        }
+    </script>
+</body>
+</html>
