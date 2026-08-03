@@ -160,13 +160,14 @@
         const searchStatus = document.getElementById('searchStatus');
 
         let pdfApplication = null;
+        let viewerReady = false;
         let lastQuery = '';
         let eventsBound = false;
         let searchTimer = null;
 
         function buildViewerUrl(pdfName) {
             const pdfUrl = new URL(pdfName, window.location.href).href;
-            return `pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`;
+            return `pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}&appVersion=8`;
         }
 
         function setSearchEnabled(enabled) {
@@ -184,6 +185,11 @@
                 const started = Date.now();
 
                 const check = () => {
+                    if (viewerReady) {
+                        resolve(null);
+                        return;
+                    }
+
                     try {
                         const app = iframe.contentWindow && iframe.contentWindow.PDFViewerApplication;
                         if (app && app.eventBus && app.pdfDocument) {
@@ -249,7 +255,10 @@
 
             try {
                 pdfApplication = await waitForPdfApplication();
-                bindPdfSearchEvents(pdfApplication);
+                if (pdfApplication) {
+                    bindPdfSearchEvents(pdfApplication);
+                }
+                viewerReady = true;
                 setSearchEnabled(true);
                 setStatus('Ready');
             } catch (error) {
@@ -265,7 +274,15 @@
                 lastQuery = '';
                 setStatus('Ready');
 
-                if (pdfApplication && pdfApplication.eventBus) {
+                if (viewerReady && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                        channel: 'gmv-pdf-search',
+                        type: 'find',
+                        query: '',
+                        findType: '',
+                        findPrevious: false
+                    }, window.location.origin);
+                } else if (pdfApplication && pdfApplication.eventBus) {
                     pdfApplication.eventBus.dispatch('find', {
                         source: window,
                         type: '',
@@ -280,7 +297,7 @@
                 return;
             }
 
-            if (!pdfApplication || !pdfApplication.eventBus || !pdfApplication.pdfDocument) {
+            if (!viewerReady && (!pdfApplication || !pdfApplication.eventBus || !pdfApplication.pdfDocument)) {
                 setStatus('Still loading...');
                 return;
             }
@@ -290,11 +307,17 @@
             setStatus('Searching...');
 
             const findType = newSearch || queryChanged ? '' : 'again';
-            const findBar = pdfApplication.findBar;
+            const findBar = pdfApplication && pdfApplication.findBar;
 
-            // Use PDF.js's own find bar when available. This keeps the external
-            // toolbar on the same, version-compatible path as the viewer UI.
-            if (findBar && findBar.findField && typeof findBar.dispatchEvent === 'function') {
+            if (viewerReady && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    channel: 'gmv-pdf-search',
+                    type: 'find',
+                    query,
+                    findType,
+                    findPrevious
+                }, window.location.origin);
+            } else if (findBar && findBar.findField && typeof findBar.dispatchEvent === 'function') {
                 findBar.findField.value = query;
                 findBar.highlightAll.checked = true;
                 findBar.caseSensitive.checked = false;
@@ -319,6 +342,7 @@
         function loadPdf(pdfName = PDF_NAME) {
             window.clearTimeout(searchTimer);
             pdfApplication = null;
+            viewerReady = false;
             eventsBound = false;
             lastQuery = '';
             searchInput.value = '';
@@ -346,12 +370,31 @@
             }
         });
 
+        window.addEventListener('message', event => {
+            if (
+                event.origin !== window.location.origin ||
+                event.source !== iframe.contentWindow ||
+                !event.data ||
+                event.data.channel !== 'gmv-pdf-search'
+            ) {
+                return;
+            }
+
+            if (event.data.type === 'ready') {
+                viewerReady = true;
+                setSearchEnabled(true);
+                setStatus('Ready');
+            } else if (event.data.type === 'status') {
+                setStatus(event.data.message);
+            }
+        });
+
         iframe.addEventListener('load', prepareViewer);
         loadPdf(PDF_NAME);
 
         if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
                     .then(registration => registration.update())
                     .catch(error => console.error('Service worker failed:', error));
             });
