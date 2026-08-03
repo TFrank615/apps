@@ -1,16 +1,10 @@
 'use strict';
 
-const CACHE_NAME = 'gmv-proto-cache-v8';
+const CACHE_NAME = 'gmv-proto-cache-v9';
 const CORE_FILES = [
     './',
     './index.html',
-    './pdfjs/web/viewer.html',
-    './pdfjs/web/viewer.css',
-    './pdfjs/web/viewer.mjs',
-    './pdfjs/web/locale/locale.json',
-    './pdfjs/web/locale/en-US/viewer.ftl',
-    './pdfjs/build/pdf.mjs',
-    './pdfjs/build/pdf.worker.mjs',
+    './search-index.json',
     './2025protocol.pdf',
     './gmvlogo.png'
 ];
@@ -151,18 +145,6 @@ self.addEventListener('fetch', event => {
 
     if (request.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
         event.respondWith(networkFirst(request));
-        return;
-    }
-
-    // The viewer URL contains the PDF filename in its query string. Serve the
-    // newly precached viewer shell regardless of that query so iPad standalone
-    // mode cannot revive an older copy of viewer.html.
-    if (url.pathname.endsWith('/pdfjs/web/viewer.html')) {
-        event.respondWith(
-            caches.open(CACHE_NAME)
-                .then(cache => cache.match('./pdfjs/web/viewer.html'))
-                .then(cached => cached || fetch(request))
-        );
         return;
     }
 

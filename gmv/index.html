@@ -13,7 +13,7 @@
     <style>
         :root {
             color-scheme: dark;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
         * {
@@ -35,26 +35,30 @@
         }
 
         .search-toolbar {
-            display: flex;
-            align-items: center;
+            position: relative;
+            z-index: 20;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 44px 44px;
             gap: 8px;
-            min-height: 58px;
             padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
             background: #0b0b0c;
             border-bottom: 1px solid #2b2b2e;
-            z-index: 20;
+        }
+
+        .search-field-wrap {
+            position: relative;
+            min-width: 0;
         }
 
         .search-input {
-            min-width: 0;
-            flex: 1;
-            height: 40px;
-            padding: 0 12px;
+            width: 100%;
+            height: 44px;
+            padding: 0 44px 0 14px;
             border: 1px solid #555;
-            border-radius: 8px;
+            border-radius: 10px;
             background: #fff;
             color: #111;
-            font-size: 16px;
+            font-size: 17px;
             outline: none;
         }
 
@@ -63,45 +67,55 @@
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
         }
 
-        .toolbar-button {
-            height: 40px;
-            padding: 0 13px;
-            border: 1px solid #2563eb;
-            border-radius: 8px;
-            background: #2563eb;
+        .clear-button {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #52525b;
+            font-size: 25px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .nav-button {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: 1px solid #3f3f46;
+            border-radius: 10px;
+            background: #27272a;
             color: #fff;
-            font-size: 14px;
+            font-size: 18px;
             font-weight: 700;
             cursor: pointer;
         }
 
-        .toolbar-button.secondary {
-            min-width: 42px;
-            padding: 0 10px;
-            border-color: #4b5563;
-            background: #27272a;
-        }
-
-        .toolbar-button:disabled {
+        .nav-button:disabled {
             cursor: not-allowed;
-            opacity: 0.45;
+            opacity: 0.38;
         }
 
         .search-status {
-            min-width: 72px;
+            grid-column: 1 / -1;
+            min-height: 17px;
             color: #d4d4d8;
             font-size: 13px;
-            text-align: center;
-            white-space: nowrap;
+            line-height: 17px;
         }
 
         .viewer-wrap {
             position: relative;
             min-height: 0;
             flex: 1;
+            background: #52525b;
         }
 
-        #mapDisplay {
+        #pdfDisplay {
             display: block;
             width: 100%;
             height: 100%;
@@ -109,288 +123,268 @@
             background: #fff;
         }
 
+        .results-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 15;
+            width: min(680px, 100%);
+            max-height: min(68vh, 720px);
+            overflow: auto;
+            overscroll-behavior: contain;
+            background: rgba(18, 18, 20, 0.98);
+            border-right: 1px solid #3f3f46;
+            border-bottom: 1px solid #3f3f46;
+            border-radius: 0 0 12px 0;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .results-panel[hidden] {
+            display: none;
+        }
+
+        .result-button {
+            display: block;
+            width: 100%;
+            padding: 13px 16px;
+            border: 0;
+            border-bottom: 1px solid #303033;
+            background: transparent;
+            color: #f4f4f5;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .result-button:active,
+        .result-button:focus-visible {
+            background: #27272a;
+            outline: none;
+        }
+
+        .result-page {
+            display: block;
+            margin-bottom: 4px;
+            color: #60a5fa;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .result-snippet {
+            display: -webkit-box;
+            overflow: hidden;
+            color: #d4d4d8;
+            font-size: 14px;
+            line-height: 1.35;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+        }
+
         @media (max-width: 640px) {
-            .search-toolbar {
-                flex-wrap: wrap;
-            }
-
-            .search-input {
-                flex-basis: calc(100% - 86px);
-            }
-
-            .search-status {
-                order: 5;
+            .results-panel {
                 width: 100%;
-                min-height: 16px;
-                text-align: left;
+                border-right: 0;
+                border-radius: 0 0 12px 12px;
             }
         }
     </style>
 </head>
 <body>
     <div class="search-toolbar" role="search" aria-label="Search protocol">
-        <input
-            id="protocolSearch"
-            class="search-input"
-            type="search"
-            enterkeyhint="search"
-            autocomplete="off"
-            placeholder="Search the protocol..."
-            aria-label="Search the protocol"
-        >
-        <button id="searchButton" class="toolbar-button" type="button">Search</button>
-        <button id="previousButton" class="toolbar-button secondary" type="button" aria-label="Previous result" title="Previous result">&#9650;</button>
-        <button id="nextButton" class="toolbar-button secondary" type="button" aria-label="Next result" title="Next result">&#9660;</button>
-        <span id="searchStatus" class="search-status" aria-live="polite">Loading...</span>
+        <div class="search-field-wrap">
+            <input
+                id="protocolSearch"
+                class="search-input"
+                type="search"
+                enterkeyhint="search"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="Search the protocol..."
+                aria-label="Search the protocol"
+                aria-controls="searchResults"
+            >
+            <button id="clearButton" class="clear-button" type="button" aria-label="Clear search">&times;</button>
+        </div>
+        <button id="previousButton" class="nav-button" type="button" aria-label="Previous matching page" title="Previous matching page" disabled>&#9650;</button>
+        <button id="nextButton" class="nav-button" type="button" aria-label="Next matching page" title="Next matching page" disabled>&#9660;</button>
+        <span id="searchStatus" class="search-status" aria-live="polite">Loading search index...</span>
     </div>
 
-    <div class="viewer-wrap">
-        <iframe id="mapDisplay" title="2025 Protocol PDF"></iframe>
-    </div>
+    <main class="viewer-wrap">
+        <div id="searchResults" class="results-panel" role="listbox" aria-label="Search results" hidden></div>
+        <iframe id="pdfDisplay" title="2025 Protocol PDF" src="2025protocol.pdf#page=1&view=FitH"></iframe>
+    </main>
 
     <script>
         'use strict';
 
         const PDF_NAME = '2025protocol.pdf';
-        const iframe = document.getElementById('mapDisplay');
+        const INDEX_NAME = 'search-index.json';
+        const MAX_VISIBLE_RESULTS = 80;
         const searchInput = document.getElementById('protocolSearch');
-        const searchButton = document.getElementById('searchButton');
+        const clearButton = document.getElementById('clearButton');
         const previousButton = document.getElementById('previousButton');
         const nextButton = document.getElementById('nextButton');
         const searchStatus = document.getElementById('searchStatus');
+        const searchResults = document.getElementById('searchResults');
+        const pdfDisplay = document.getElementById('pdfDisplay');
 
-        let pdfApplication = null;
-        let viewerReady = false;
-        let lastQuery = '';
-        let eventsBound = false;
+        let indexedPages = [];
+        let matches = [];
+        let selectedMatch = -1;
         let searchTimer = null;
 
-        function buildViewerUrl(pdfName) {
-            const pdfUrl = new URL(pdfName, window.location.href).href;
-            return `pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}&appVersion=8`;
-        }
-
-        function setSearchEnabled(enabled) {
-            searchButton.disabled = !enabled;
-            previousButton.disabled = !enabled;
-            nextButton.disabled = !enabled;
+        function normalizeText(value) {
+            return value
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLocaleLowerCase()
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
         function setStatus(message) {
             searchStatus.textContent = message;
         }
 
-        function waitForPdfApplication(timeoutMs = 30000) {
-            return new Promise((resolve, reject) => {
-                const started = Date.now();
-
-                const check = () => {
-                    if (viewerReady) {
-                        resolve(null);
-                        return;
-                    }
-
-                    try {
-                        const app = iframe.contentWindow && iframe.contentWindow.PDFViewerApplication;
-                        if (app && app.eventBus && app.pdfDocument) {
-                            resolve(app);
-                            return;
-                        }
-                    } catch (error) {
-                        reject(new Error('The PDF viewer must be hosted on the same website as index.html.'));
-                        return;
-                    }
-
-                    if (Date.now() - started >= timeoutMs) {
-                        reject(new Error('The PDF viewer did not finish loading.'));
-                        return;
-                    }
-
-                    window.setTimeout(check, 150);
-                };
-
-                check();
-            });
+        function setNavigationEnabled(enabled) {
+            previousButton.disabled = !enabled;
+            nextButton.disabled = !enabled;
         }
 
-        function bindPdfSearchEvents(app) {
-            if (eventsBound) {
-                return;
+        function makeSnippet(text, query) {
+            const lowerText = text.toLocaleLowerCase();
+            const words = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+            let matchAt = lowerText.indexOf(query.toLocaleLowerCase());
+
+            if (matchAt < 0 && words.length) {
+                matchAt = lowerText.indexOf(words[0]);
             }
 
-            app.eventBus.on('updatefindmatchescount', event => {
-                const count = event && event.matchesCount;
-                if (!count) {
-                    return;
-                }
-
-                if (count.total > 0) {
-                    setStatus(`${count.current || 1} of ${count.total}`);
-                } else if (lastQuery) {
-                    setStatus('No results');
-                }
-            });
-
-            app.eventBus.on('updatefindcontrolstate', event => {
-                // PDF.js find states: 0 = found, 1 = not found, 2 = wrapped, 3 = pending.
-                if (!event) {
-                    return;
-                }
-
-                if (event.state === 1) {
-                    setStatus('No results');
-                } else if (event.state === 3) {
-                    setStatus('Searching...');
-                } else if (event.matchesCount && event.matchesCount.total > 0) {
-                    setStatus(`${event.matchesCount.current || 1} of ${event.matchesCount.total}`);
-                }
-            });
-
-            eventsBound = true;
+            const start = Math.max(0, matchAt < 0 ? 0 : matchAt - 90);
+            const end = Math.min(text.length, start + 240);
+            return `${start > 0 ? '...' : ''}${text.slice(start, end)}${end < text.length ? '...' : ''}`;
         }
 
-        async function prepareViewer() {
-            setSearchEnabled(false);
-            setStatus('Loading...');
+        function renderResults(query) {
+            searchResults.replaceChildren();
 
-            try {
-                pdfApplication = await waitForPdfApplication();
-                if (pdfApplication) {
-                    bindPdfSearchEvents(pdfApplication);
-                }
-                viewerReady = true;
-                setSearchEnabled(true);
-                setStatus('Ready');
-            } catch (error) {
-                console.error(error);
-                setStatus('Viewer error');
+            for (const [index, match] of matches.slice(0, MAX_VISIBLE_RESULTS).entries()) {
+                const button = document.createElement('button');
+                const pageLabel = document.createElement('span');
+                const snippet = document.createElement('span');
+
+                button.type = 'button';
+                button.className = 'result-button';
+                button.setAttribute('role', 'option');
+                pageLabel.className = 'result-page';
+                pageLabel.textContent = `Page ${match.page}`;
+                snippet.className = 'result-snippet';
+                snippet.textContent = makeSnippet(match.text, query);
+                button.append(pageLabel, snippet);
+                button.addEventListener('click', () => openMatch(index));
+                searchResults.append(button);
             }
+
+            searchResults.hidden = matches.length === 0;
         }
 
-        function dispatchFind({ findPrevious = false, newSearch = false } = {}) {
-            const query = searchInput.value.trim();
+        function searchProtocol() {
+            const rawQuery = searchInput.value.trim();
+            const query = normalizeText(rawQuery);
 
             if (!query) {
-                lastQuery = '';
+                matches = [];
+                selectedMatch = -1;
+                searchResults.hidden = true;
+                setNavigationEnabled(false);
+                setStatus(indexedPages.length ? 'Ready' : 'Loading search index...');
+                return;
+            }
+
+            if (!indexedPages.length) {
+                setStatus('Search is still loading...');
+                return;
+            }
+
+            const terms = query.split(' ').filter(Boolean);
+            matches = indexedPages.filter(page => terms.every(term => page.search.includes(term)));
+            matches.sort((left, right) => {
+                const leftExact = left.search.indexOf(query);
+                const rightExact = right.search.indexOf(query);
+                if (leftExact >= 0 && rightExact < 0) return -1;
+                if (rightExact >= 0 && leftExact < 0) return 1;
+                return left.page - right.page;
+            });
+
+            selectedMatch = -1;
+            setNavigationEnabled(matches.length > 0);
+            setStatus(matches.length === 1 ? '1 matching page' : `${matches.length} matching pages`);
+            renderResults(rawQuery);
+        }
+
+        function openMatch(index) {
+            if (!matches.length) return;
+
+            selectedMatch = (index + matches.length) % matches.length;
+            const match = matches[selectedMatch];
+            pdfDisplay.src = `${PDF_NAME}#page=${match.page}&view=FitH`;
+            searchResults.hidden = true;
+            setStatus(`Page ${match.page} - match ${selectedMatch + 1} of ${matches.length}`);
+        }
+
+        function moveMatch(direction) {
+            if (!matches.length) return;
+            openMatch(selectedMatch < 0 ? (direction > 0 ? 0 : matches.length - 1) : selectedMatch + direction);
+        }
+
+        async function loadSearchIndex() {
+            try {
+                const response = await fetch(INDEX_NAME);
+                if (!response.ok) throw new Error(`Search index request failed: ${response.status}`);
+                const index = await response.json();
+                indexedPages = index.pages.map(page => ({
+                    ...page,
+                    search: normalizeText(page.text)
+                }));
                 setStatus('Ready');
-
-                if (viewerReady && iframe.contentWindow) {
-                    iframe.contentWindow.postMessage({
-                        channel: 'gmv-pdf-search',
-                        type: 'find',
-                        query: '',
-                        findType: '',
-                        findPrevious: false
-                    }, window.location.origin);
-                } else if (pdfApplication && pdfApplication.eventBus) {
-                    pdfApplication.eventBus.dispatch('find', {
-                        source: window,
-                        type: '',
-                        query: '',
-                        caseSensitive: false,
-                        entireWord: false,
-                        highlightAll: true,
-                        findPrevious: false,
-                        matchDiacritics: false
-                    });
-                }
-                return;
+                if (searchInput.value.trim()) searchProtocol();
+            } catch (error) {
+                console.error(error);
+                setStatus('Search unavailable');
             }
-
-            if (!viewerReady && (!pdfApplication || !pdfApplication.eventBus || !pdfApplication.pdfDocument)) {
-                setStatus('Still loading...');
-                return;
-            }
-
-            const queryChanged = query !== lastQuery;
-            lastQuery = query;
-            setStatus('Searching...');
-
-            const findType = newSearch || queryChanged ? '' : 'again';
-            const findBar = pdfApplication && pdfApplication.findBar;
-
-            if (viewerReady && iframe.contentWindow) {
-                iframe.contentWindow.postMessage({
-                    channel: 'gmv-pdf-search',
-                    type: 'find',
-                    query,
-                    findType,
-                    findPrevious
-                }, window.location.origin);
-            } else if (findBar && findBar.findField && typeof findBar.dispatchEvent === 'function') {
-                findBar.findField.value = query;
-                findBar.highlightAll.checked = true;
-                findBar.caseSensitive.checked = false;
-                findBar.entireWord.checked = false;
-                findBar.matchDiacritics.checked = false;
-                findBar.dispatchEvent(findType, findPrevious);
-            } else {
-                pdfApplication.eventBus.dispatch('find', {
-                    source: window,
-                    type: findType,
-                    query,
-                    caseSensitive: false,
-                    entireWord: false,
-                    highlightAll: true,
-                    findPrevious,
-                    matchDiacritics: false
-                });
-            }
-
         }
-
-        function loadPdf(pdfName = PDF_NAME) {
-            window.clearTimeout(searchTimer);
-            pdfApplication = null;
-            viewerReady = false;
-            eventsBound = false;
-            lastQuery = '';
-            searchInput.value = '';
-            setSearchEnabled(false);
-            setStatus('Loading...');
-            iframe.src = buildViewerUrl(pdfName);
-        }
-
-        searchButton.addEventListener('click', () => dispatchFind({ newSearch: true }));
-        previousButton.addEventListener('click', () => dispatchFind({ findPrevious: true }));
-        nextButton.addEventListener('click', () => dispatchFind({ findPrevious: false }));
 
         searchInput.addEventListener('input', () => {
             window.clearTimeout(searchTimer);
-            searchTimer = window.setTimeout(() => {
-                dispatchFind({ newSearch: true });
-            }, 250);
+            searchTimer = window.setTimeout(searchProtocol, 120);
         });
 
         searchInput.addEventListener('keydown', event => {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && matches.length) {
                 event.preventDefault();
                 window.clearTimeout(searchTimer);
-                dispatchFind({ findPrevious: event.shiftKey });
+                openMatch(selectedMatch < 0 ? 0 : selectedMatch + (event.shiftKey ? -1 : 1));
+            } else if (event.key === 'Escape') {
+                searchResults.hidden = true;
             }
         });
 
-        window.addEventListener('message', event => {
-            if (
-                event.origin !== window.location.origin ||
-                event.source !== iframe.contentWindow ||
-                !event.data ||
-                event.data.channel !== 'gmv-pdf-search'
-            ) {
-                return;
-            }
-
-            if (event.data.type === 'ready') {
-                viewerReady = true;
-                setSearchEnabled(true);
-                setStatus('Ready');
-            } else if (event.data.type === 'status') {
-                setStatus(event.data.message);
-            }
+        searchInput.addEventListener('focus', () => {
+            if (matches.length) searchResults.hidden = false;
         });
 
-        iframe.addEventListener('load', prepareViewer);
-        loadPdf(PDF_NAME);
+        clearButton.addEventListener('click', () => {
+            searchInput.value = '';
+            searchProtocol();
+            searchInput.focus();
+        });
+
+        previousButton.addEventListener('click', () => moveMatch(-1));
+        nextButton.addEventListener('click', () => moveMatch(1));
+
+        loadSearchIndex();
 
         if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
             window.addEventListener('load', () => {
