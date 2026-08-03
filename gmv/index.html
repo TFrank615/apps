@@ -99,7 +99,6 @@
             position: relative;
             min-height: 0;
             flex: 1;
-            padding-bottom: calc(76px + env(safe-area-inset-bottom));
         }
 
         #mapDisplay {
@@ -108,33 +107,6 @@
             height: 100%;
             border: 0;
             background: #fff;
-        }
-
-        .bottom-nav {
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            padding: 14px 12px calc(18px + env(safe-area-inset-bottom));
-            background: linear-gradient(to top, #000 35%, rgba(0, 0, 0, 0.82) 70%, transparent);
-            pointer-events: none;
-        }
-
-        .map-button {
-            min-width: 110px;
-            padding: 10px 24px;
-            border: 1px solid #3b82f6;
-            border-radius: 999px;
-            background: #2563eb;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-            cursor: pointer;
-            pointer-events: auto;
         }
 
         @media (max-width: 640px) {
@@ -174,10 +146,6 @@
 
     <div class="viewer-wrap">
         <iframe id="mapDisplay" title="2025 Protocol PDF"></iframe>
-
-        <div class="bottom-nav">
-            <button id="mainButton" class="map-button" type="button">Main</button>
-        </div>
     </div>
 
     <script>
@@ -190,11 +158,11 @@
         const previousButton = document.getElementById('previousButton');
         const nextButton = document.getElementById('nextButton');
         const searchStatus = document.getElementById('searchStatus');
-        const mainButton = document.getElementById('mainButton');
 
         let pdfApplication = null;
         let lastQuery = '';
         let eventsBound = false;
+        let searchTimer = null;
 
         function buildViewerUrl(pdfName) {
             const pdfUrl = new URL(pdfName, window.location.href).href;
@@ -267,6 +235,8 @@
                     setStatus('No results');
                 } else if (event.state === 3) {
                     setStatus('Searching...');
+                } else if (event.matchesCount && event.matchesCount.total > 0) {
+                    setStatus(`${event.matchesCount.current || 1} of ${event.matchesCount.total}`);
                 }
             });
 
@@ -293,8 +263,20 @@
 
             if (!query) {
                 lastQuery = '';
-                setStatus('Enter a term');
-                searchInput.focus();
+                setStatus('Ready');
+
+                if (pdfApplication && pdfApplication.eventBus) {
+                    pdfApplication.eventBus.dispatch('find', {
+                        source: window,
+                        type: '',
+                        query: '',
+                        caseSensitive: false,
+                        entireWord: false,
+                        highlightAll: true,
+                        findPrevious: false,
+                        matchDiacritics: false
+                    });
+                }
                 return;
             }
 
@@ -307,21 +289,35 @@
             lastQuery = query;
             setStatus('Searching...');
 
-            pdfApplication.eventBus.dispatch('find', {
-                source: window,
-                type: newSearch || queryChanged ? '' : 'again',
-                query,
-                caseSensitive: false,
-                entireWord: false,
-                highlightAll: true,
-                findPrevious,
-                matchDiacritics: false
-            });
+            const findType = newSearch || queryChanged ? '' : 'again';
+            const findBar = pdfApplication.findBar;
 
-            iframe.focus();
+            // Use PDF.js's own find bar when available. This keeps the external
+            // toolbar on the same, version-compatible path as the viewer UI.
+            if (findBar && findBar.findField && typeof findBar.dispatchEvent === 'function') {
+                findBar.findField.value = query;
+                findBar.highlightAll.checked = true;
+                findBar.caseSensitive.checked = false;
+                findBar.entireWord.checked = false;
+                findBar.matchDiacritics.checked = false;
+                findBar.dispatchEvent(findType, findPrevious);
+            } else {
+                pdfApplication.eventBus.dispatch('find', {
+                    source: window,
+                    type: findType,
+                    query,
+                    caseSensitive: false,
+                    entireWord: false,
+                    highlightAll: true,
+                    findPrevious,
+                    matchDiacritics: false
+                });
+            }
+
         }
 
         function loadPdf(pdfName = PDF_NAME) {
+            window.clearTimeout(searchTimer);
             pdfApplication = null;
             eventsBound = false;
             lastQuery = '';
@@ -335,16 +331,22 @@
         previousButton.addEventListener('click', () => dispatchFind({ findPrevious: true }));
         nextButton.addEventListener('click', () => dispatchFind({ findPrevious: false }));
 
+        searchInput.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => {
+                dispatchFind({ newSearch: true });
+            }, 250);
+        });
+
         searchInput.addEventListener('keydown', event => {
             if (event.key === 'Enter') {
                 event.preventDefault();
+                window.clearTimeout(searchTimer);
                 dispatchFind({ findPrevious: event.shiftKey });
             }
         });
 
         iframe.addEventListener('load', prepareViewer);
-        mainButton.addEventListener('click', () => loadPdf(PDF_NAME));
-
         loadPdf(PDF_NAME);
 
         if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {

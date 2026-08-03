@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'gmv-proto-cache-v4';
+const CACHE_NAME = 'gmv-proto-cache-v7';
 const CORE_FILES = [
     './',
     './index.html',
