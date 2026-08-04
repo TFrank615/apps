@@ -1,6 +1,7 @@
 'use strict';
 
-const CACHE_NAME = 'gmv-proto-cache-v10';
+const CACHE_NAME = 'gmv-proto-cache-v11';
+const PAGE_CACHE_NAME = 'gmv-proto-pages-v1';
 const PAGE_COUNT = 324;
 const PAGE_FILES = Array.from(
     { length: PAGE_COUNT },
@@ -27,7 +28,7 @@ self.addEventListener('activate', event => {
         caches.keys()
             .then(keys => Promise.all(
                 keys
-                    .filter(key => key !== CACHE_NAME)
+                    .filter(key => key !== CACHE_NAME && key !== PAGE_CACHE_NAME)
                     .map(key => caches.delete(key))
             ))
             .then(() => self.clients.claim())
@@ -130,6 +131,16 @@ async function cacheFirst(request) {
     return response;
 }
 
+async function pageCacheFirst(request) {
+    const cache = await caches.open(PAGE_CACHE_NAME);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+
+    const response = await fetch(request);
+    if (response && response.ok) await cache.put(request, response.clone());
+    return response;
+}
+
 self.addEventListener('fetch', event => {
     const request = event.request;
 
@@ -140,6 +151,11 @@ self.addEventListener('fetch', event => {
     const url = new URL(request.url);
 
     if (!isSameOrigin(url)) {
+        return;
+    }
+
+    if (url.pathname.includes('/pages/')) {
+        event.respondWith(pageCacheFirst(request));
         return;
     }
 
@@ -157,7 +173,7 @@ self.addEventListener('fetch', event => {
 });
 
 async function cachePageImages() {
-    const cache = await caches.open(CACHE_NAME);
+    const cache = await caches.open(PAGE_CACHE_NAME);
     const batchSize = 8;
 
     for (let start = 0; start < PAGE_FILES.length; start += batchSize) {

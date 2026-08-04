@@ -188,6 +188,14 @@
             font-weight: 800;
         }
 
+        .result-location {
+            display: block;
+            margin-bottom: 5px;
+            color: #a1a1aa;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
         .result-snippet {
             display: -webkit-box;
             overflow: hidden;
@@ -292,16 +300,19 @@
             for (const [index, match] of matches.slice(0, MAX_VISIBLE_RESULTS).entries()) {
                 const button = document.createElement('button');
                 const pageLabel = document.createElement('span');
+                const pageLocation = document.createElement('span');
                 const snippet = document.createElement('span');
 
                 button.type = 'button';
                 button.className = 'result-button';
                 button.setAttribute('role', 'option');
                 pageLabel.className = 'result-page';
-                pageLabel.textContent = `Page ${match.page}`;
+                pageLabel.textContent = `${match.seriesNumber} — ${match.seriesName} — ${match.subject}`;
+                pageLocation.className = 'result-location';
+                pageLocation.textContent = `PDF page ${match.page}`;
                 snippet.className = 'result-snippet';
                 snippet.textContent = makeSnippet(match.text, query);
-                button.append(pageLabel, snippet);
+                button.append(pageLabel, pageLocation, snippet);
                 button.addEventListener('click', () => openMatch(index));
                 searchResults.append(button);
             }
@@ -377,10 +388,14 @@
             const terms = query.split(' ').filter(Boolean);
             matches = indexedPages.filter(page => terms.every(term => page.search.includes(term)));
             matches.sort((left, right) => {
-                const leftExact = left.search.indexOf(query);
-                const rightExact = right.search.indexOf(query);
-                if (leftExact >= 0 && rightExact < 0) return -1;
-                if (rightExact >= 0 && leftExact < 0) return 1;
+                const rank = page => {
+                    if (normalizeText(page.subject).includes(query)) return 0;
+                    if (normalizeText(page.seriesName).includes(query)) return 1;
+                    if (page.search.includes(query)) return 2;
+                    return 3;
+                };
+                const rankDifference = rank(left) - rank(right);
+                if (rankDifference !== 0) return rankDifference;
                 return left.page - right.page;
             });
 
