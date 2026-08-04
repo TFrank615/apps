@@ -1,6 +1,11 @@
 'use strict';
 
-const CACHE_NAME = 'gmv-proto-cache-v9';
+const CACHE_NAME = 'gmv-proto-cache-v10';
+const PAGE_COUNT = 324;
+const PAGE_FILES = Array.from(
+    { length: PAGE_COUNT },
+    (_, index) => `./pages/page-${String(index + 1).padStart(3, '0')}.webp`
+);
 const CORE_FILES = [
     './',
     './index.html',
@@ -149,4 +154,29 @@ self.addEventListener('fetch', event => {
     }
 
     event.respondWith(cacheFirst(request));
+});
+
+async function cachePageImages() {
+    const cache = await caches.open(CACHE_NAME);
+    const batchSize = 8;
+
+    for (let start = 0; start < PAGE_FILES.length; start += batchSize) {
+        const batch = PAGE_FILES.slice(start, start + batchSize);
+        await Promise.all(batch.map(async pageUrl => {
+            if (await cache.match(pageUrl)) return;
+
+            try {
+                const response = await fetch(pageUrl);
+                if (response.ok) await cache.put(pageUrl, response);
+            } catch (error) {
+                // Pages already cached remain available if the connection drops.
+            }
+        }));
+    }
+}
+
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'cache-page-images') {
+        event.waitUntil(cachePageImages());
+    }
 });
