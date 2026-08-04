@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="2025 PROTO">
+
+    <link rel="apple-touch-icon" href="gmvlogo.png">
+    <title>2025 PROTO</title>
+
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .search-toolbar {
+            position: relative;
+            z-index: 20;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 44px 44px;
+            gap: 8px;
+            padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
+            background: #0b0b0c;
+            border-bottom: 1px solid #2b2b2e;
+        }
+
+        .search-field-wrap {
+            position: relative;
+            min-width: 0;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 44px;
+            padding: 0 44px 0 14px;
+            border: 1px solid #555;
+            border-radius: 10px;
+            background: #fff;
+            color: #111;
+            font-size: 17px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+
+        .clear-button {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #52525b;
+            font-size: 25px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .nav-button {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: 1px solid #3f3f46;
+            border-radius: 10px;
+            background: #27272a;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .nav-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.38;
+        }
+
+        .search-status {
+            grid-column: 1 / -1;
+            min-height: 17px;
+            color: #d4d4d8;
+            font-size: 13px;
+            line-height: 17px;
+        }
+
+        .viewer-wrap {
+            position: relative;
+            min-height: 0;
+            flex: 1;
+            background: #52525b;
+        }
+
+        .document-viewer {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            padding: 12px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .pdf-page {
+            display: block;
+            width: min(100%, 1000px);
+            aspect-ratio: 612 / 792;
+            margin: 0 auto 12px;
+            background: #fff;
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.38);
+            scroll-margin-top: 12px;
+        }
+
+        .pdf-page img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .results-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 15;
+            width: min(680px, 100%);
+            max-height: min(68vh, 720px);
+            overflow: auto;
+            overscroll-behavior: contain;
+            background: rgba(18, 18, 20, 0.98);
+            border-right: 1px solid #3f3f46;
+            border-bottom: 1px solid #3f3f46;
+            border-radius: 0 0 12px 0;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .results-panel[hidden] {
+            display: none;
+        }
+
+        .result-button {
+            display: block;
+            width: 100%;
+            padding: 13px 16px;
+            border: 0;
+            border-bottom: 1px solid #303033;
+            background: transparent;
+            color: #f4f4f5;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .result-button:active,
+        .result-button:focus-visible {
+            background: #27272a;
+            outline: none;
+        }
+
+        .result-page {
+            display: block;
+            margin-bottom: 4px;
+            color: #60a5fa;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .result-location {
+            display: block;
+            margin-bottom: 5px;
+            color: #a1a1aa;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .result-snippet {
+            display: -webkit-box;
+            overflow: hidden;
+            color: #d4d4d8;
+            font-size: 14px;
+            line-height: 1.35;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+        }
+
+        @media (max-width: 640px) {
+            .results-panel {
+                width: 100%;
+                border-right: 0;
+                border-radius: 0 0 12px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="search-toolbar" role="search" aria-label="Search protocol">
+        <div class="search-field-wrap">
+            <input
+                id="protocolSearch"
+                class="search-input"
+                type="search"
+                enterkeyhint="search"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="Search the protocol..."
+                aria-label="Search the protocol"
+                aria-controls="searchResults"
+            >
+            <button id="clearButton" class="clear-button" type="button" aria-label="Clear search">&times;</button>
+        </div>
+        <button id="previousButton" class="nav-button" type="button" aria-label="Previous matching page" title="Previous matching page" disabled>&#9650;</button>
+        <button id="nextButton" class="nav-button" type="button" aria-label="Next matching page" title="Next matching page" disabled>&#9660;</button>
+        <span id="searchStatus" class="search-status" aria-live="polite">Loading search index...</span>
+    </div>
+
+    <main class="viewer-wrap">
+        <div id="searchResults" class="results-panel" role="listbox" aria-label="Search results" hidden></div>
+        <div id="documentViewer" class="document-viewer" role="document" aria-label="2025 Protocol PDF pages"></div>
+    </main>
+
+    <script>
+        'use strict';
+
+        const INDEX_NAME = 'search-index.json';
+        const MAX_VISIBLE_RESULTS = 80;
+        const searchInput = document.getElementById('protocolSearch');
+        const clearButton = document.getElementById('clearButton');
+        const previousButton = document.getElementById('previousButton');
+        const nextButton = document.getElementById('nextButton');
+        const searchStatus = document.getElementById('searchStatus');
+        const searchResults = document.getElementById('searchResults');
+        const documentViewer = document.getElementById('documentViewer');
+
+        let indexedPages = [];
+        let matches = [];
+        let selectedMatch = -1;
+        let searchTimer = null;
+        let currentPage = 1;
+        let pageObserver = null;
+
+        function normalizeText(value) {
+            return value
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLocaleLowerCase()
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function setStatus(message) {
+            searchStatus.textContent = message;
+        }
+
+        function setNavigationEnabled(enabled) {
+            previousButton.disabled = !enabled;
+            nextButton.disabled = !enabled;
+        }
+
+        function makeSnippet(text, query) {
+            const lowerText = text.toLocaleLowerCase();
+            const words = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+            let matchAt = lowerText.indexOf(query.toLocaleLowerCase());
+
+            if (matchAt < 0 && words.length) {
+                matchAt = lowerText.indexOf(words[0]);
+            }
+
+            const start = Math.max(0, matchAt < 0 ? 0 : matchAt - 90);
+            const end = Math.min(text.length, start + 240);
+            return `${start > 0 ? '...' : ''}${text.slice(start, end)}${end < text.length ? '...' : ''}`;
+        }
+
+        function renderResults(query) {
+            searchResults.replaceChildren();
+
+            for (const [index, match] of matches.slice(0, MAX_VISIBLE_RESULTS).entries()) {
+                const button = document.createElement('button');
+                const pageLabel = document.createElement('span');
+                const pageLocation = document.createElement('span');
+                const snippet = document.createElement('span');
+
+                button.type = 'button';
+                button.className = 'result-button';
+                button.setAttribute('role', 'option');
+                pageLabel.className = 'result-page';
+                pageLabel.textContent = `${match.seriesNumber} — ${match.seriesName} — ${match.subject}`;
+                pageLocation.className = 'result-location';
+                pageLocation.textContent = `PDF page ${match.page}`;
+                snippet.className = 'result-snippet';
+                snippet.textContent = makeSnippet(match.text, query);
+                button.append(pageLabel, pageLocation, snippet);
+                button.addEventListener('click', () => openMatch(index));
+                searchResults.append(button);
+            }
+
+            searchResults.hidden = matches.length === 0;
+        }
+
+        function buildDocument(pageCount) {
+            const fragment = document.createDocumentFragment();
+
+            for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+                const page = document.createElement('section');
+                const image = document.createElement('img');
+
+                page.id = `page-${pageNumber}`;
+                page.className = 'pdf-page';
+                page.dataset.page = pageNumber;
+                page.setAttribute('aria-label', `Protocol page ${pageNumber}`);
+                image.src = `pages/page-${String(pageNumber).padStart(3, '0')}.webp`;
+                image.alt = `Protocol page ${pageNumber}`;
+                image.decoding = 'async';
+                image.loading = pageNumber <= 2 ? 'eager' : 'lazy';
+                page.append(image);
+                fragment.append(page);
+            }
+
+            documentViewer.replaceChildren(fragment);
+
+            pageObserver = new IntersectionObserver(entries => {
+                const visible = entries
+                    .filter(entry => entry.isIntersecting)
+                    .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+
+                if (visible) {
+                    currentPage = Number.parseInt(visible.target.dataset.page, 10);
+                    if (!searchInput.value.trim()) {
+                        setStatus(`Page ${currentPage} of ${pageCount}`);
+                    }
+                }
+            }, {
+                root: documentViewer,
+                threshold: [0.15, 0.4, 0.7]
+            });
+
+            documentViewer.querySelectorAll('.pdf-page').forEach(page => pageObserver.observe(page));
+        }
+
+        function openPage(pageNumber) {
+            const page = document.getElementById(`page-${pageNumber}`);
+            if (!page) return;
+            currentPage = pageNumber;
+            page.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function searchProtocol() {
+            const rawQuery = searchInput.value.trim();
+            const query = normalizeText(rawQuery);
+
+            if (!query) {
+                matches = [];
+                selectedMatch = -1;
+                searchResults.hidden = true;
+                setNavigationEnabled(false);
+                setStatus(indexedPages.length ? 'Ready' : 'Loading search index...');
+                return;
+            }
+
+            if (!indexedPages.length) {
+                setStatus('Search is still loading...');
+                return;
+            }
+
+            const terms = query.split(' ').filter(Boolean);
+            matches = indexedPages.filter(page => terms.every(term => page.search.includes(term)));
+            matches.sort((left, right) => {
+                const rank = page => {
+                    if (normalizeText(page.subject).includes(query)) return 0;
+                    if (normalizeText(page.seriesName).includes(query)) return 1;
+                    if (page.search.includes(query)) return 2;
+                    return 3;
+                };
+                const rankDifference = rank(left) - rank(right);
+                if (rankDifference !== 0) return rankDifference;
+                return left.page - right.page;
+            });
+
+            selectedMatch = -1;
+            setNavigationEnabled(matches.length > 0);
+            setStatus(matches.length === 1 ? '1 matching page' : `${matches.length} matching pages`);
+            renderResults(rawQuery);
+        }
+
+        function openMatch(index) {
+            if (!matches.length) return;
+
+            selectedMatch = (index + matches.length) % matches.length;
+            const match = matches[selectedMatch];
+            openPage(match.page);
+            searchResults.hidden = true;
+            setStatus(`Page ${match.page} - match ${selectedMatch + 1} of ${matches.length}`);
+        }
+
+        function moveMatch(direction) {
+            if (!matches.length) return;
+            openMatch(selectedMatch < 0 ? (direction > 0 ? 0 : matches.length - 1) : selectedMatch + direction);
+        }
+
+        async function loadSearchIndex() {
+            try {
+                const response = await fetch(INDEX_NAME);
+                if (!response.ok) throw new Error(`Search index request failed: ${response.status}`);
+                const index = await response.json();
+                buildDocument(index.pageCount);
+                indexedPages = index.pages.map(page => ({
+                    ...page,
+                    search: normalizeText(page.text)
+                }));
+                setStatus(`Page ${currentPage} of ${index.pageCount}`);
+                if (searchInput.value.trim()) searchProtocol();
+            } catch (error) {
+                console.error(error);
+                setStatus('Search unavailable');
+            }
+        }
+
+        searchInput.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(searchProtocol, 120);
+        });
+
+        searchInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && matches.length) {
+                event.preventDefault();
+                window.clearTimeout(searchTimer);
+                openMatch(selectedMatch < 0 ? 0 : selectedMatch + (event.shiftKey ? -1 : 1));
+            } else if (event.key === 'Escape') {
+                searchResults.hidden = true;
+            }
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (matches.length) searchResults.hidden = false;
+        });
+
+        clearButton.addEventListener('click', () => {
+            searchInput.value = '';
+            searchProtocol();
+            searchInput.focus();
+        });
+
+        previousButton.addEventListener('click', () => moveMatch(-1));
+        nextButton.addEventListener('click', () => moveMatch(1));
+
+        loadSearchIndex();
+
+        if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+            window.addEventListener('load', () => {
+                const cachePages = registration => {
+                    if (registration.active) {
+                        registration.active.postMessage({ type: 'cache-page-images' });
+                    }
+                };
+
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    navigator.serviceWorker.ready.then(cachePages);
+                });
+
+                navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+                    .then(async registration => {
+                        await registration.update();
+                        cachePages(registration);
+                    })
+                    .catch(error => console.error('Service worker failed:', error));
+            });
+        }
+    </script>
+</body>
+</html>
