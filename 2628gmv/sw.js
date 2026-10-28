@@ -1,7 +1,7 @@
 'use strict';
 
-const CACHE_NAME = 'gmv-proto-cache-v12';
-const PAGE_CACHE_NAME = 'gmv-proto-pages-v2';
+const CACHE_NAME = 'gmv-proto-cache-v13';
+const PAGE_CACHE_NAME = 'gmv-proto-pages-v3';
 const PAGE_COUNT = 328;
 const PAGE_FILES = Array.from(
     { length: PAGE_COUNT },
@@ -11,7 +11,7 @@ const CORE_FILES = [
     './',
     './index.html',
     './search-index.json',
-    './2628gmv.pdf',
+    './2628gmvupd.pdf',
     './gmvlogo.png'
 ];
 

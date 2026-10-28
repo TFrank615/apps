@@ -8,7 +8,7 @@ from pypdf import PdfReader
 
 
 ROOT = Path(__file__).resolve().parent
-PDF_PATH = ROOT / "2628gmv.pdf"
+PDF_PATH = ROOT / "2628gmvupd.pdf"
 INDEX_PATH = ROOT / "search-index.json"
 HEADER_PATTERN = re.compile(
     r"^(?P<series_name>.+?)\s+(?P<series_number>[A-Z]|\d{4})\s+"

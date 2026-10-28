@@ -6,7 +6,7 @@ import pypdfium2 as pdfium
 
 
 ROOT = Path(__file__).resolve().parent
-PDF_PATH = ROOT / "2628gmv.pdf"
+PDF_PATH = ROOT / "2628gmvupd.pdf"
 PAGES_DIR = ROOT / "pages"
 RENDER_SCALE = 2.0  # 144 DPI for standard 72-point PDF pages.
 WEBP_QUALITY = 76
